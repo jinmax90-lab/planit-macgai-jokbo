@@ -469,7 +469,7 @@ st.divider()
 col1, col2 = st.columns(2)
 
 with col1:
-    st.subheader("📁 맥가이 - 회원명단 엑셀파일")
+    st.markdown("##### 📁 맥가이 - 회원명단")
     uploaded_macguy = st.file_uploader(
         "회원명단 파일 업로드",
         type=['xls', 'xlsx'],
@@ -478,7 +478,7 @@ with col1:
     )
 
 with col2:
-    st.subheader("📁 기존 학생관리 엑셀파일")
+    st.markdown("##### 📁 기존 학생관리 파일")
     uploaded_master = st.file_uploader(
         "기존 최종파일 업로드 (선택)",
         type=['xlsx'],

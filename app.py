@@ -460,8 +460,11 @@ st.set_page_config(
     layout="centered"
 )
 
+# 버전 관리 (화면에 표시 안함)
+# v1.2
+
 # 업데이트 시점 표시
-st.markdown('<p style="color: #666; font-size: 12px; text-align: right; margin-bottom: 0;">v1.1 | 2026-04-03 업데이트</p>', unsafe_allow_html=True)
+st.markdown('<p style="color: #666; font-size: 12px; text-align: right; margin-bottom: 0;">2026-04-03 21:00 업데이트</p>', unsafe_allow_html=True)
 
 st.markdown("#### 🏫 플래닛학원 족보ID관리")
 st.caption("맥가이 - 회원명단 엑셀파일 → 학생관리 최종파일")

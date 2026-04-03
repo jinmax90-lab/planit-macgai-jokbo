@@ -279,6 +279,9 @@ def process_update(df_macguy, df_master=None):
             })
     
     df_new = pd.DataFrame(new_records)
+    # 모든 컬럼을 object 타입으로 변환 (pandas Arrow 호환성)
+    for col in df_new.columns:
+        df_new[col] = df_new[col].astype(object)
     logs.append(f"  → 맥가이 레코드: {len(df_new)}건")
     
     # 2. 기존 마스터에서 족보ID, 배포그룹 복원

@@ -6,10 +6,13 @@ Streamlit 웹앱
 import streamlit as st
 import pandas as pd
 from io import BytesIO
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill, Font, Border, Side, Alignment
 from openpyxl.utils import get_column_letter
+
+# 한국 시간대 (UTC+9)
+KST = timezone(timedelta(hours=9))
 
 # ============================================================
 # 설정
@@ -517,9 +520,9 @@ if st.button("🚀 업데이트 실행", type="primary", use_container_width=Tru
                     elif log:
                         st.info(log)
                 
-                # 결과 저장
-                timestamp = datetime.now().strftime("%y%m%d_%H%M")
-                filename = f"{timestamp}_학생관리_최종.xlsx"
+                # 결과 저장 (한국 시간 기준)
+                timestamp = datetime.now(KST).strftime("%y%m%d_%H%M")
+                filename = f"{timestamp}_족보ID 관리.xlsx"
                 
                 excel_data = save_to_excel(df_result, color_info)
                 

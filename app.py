@@ -455,7 +455,7 @@ def process_update(df_macguy, df_master=None):
 # Streamlit UI
 # ============================================================
 st.set_page_config(
-    page_title="플래닛학원 학생관리",
+    page_title="플래닛학원 족보ID관리",
     page_icon="🏫",
     layout="centered"
 )
@@ -463,7 +463,7 @@ st.set_page_config(
 # 업데이트 시점 표시
 st.markdown('<p style="color: #666; font-size: 12px; text-align: right; margin-bottom: 0;">v1.1 | 2026-04-03 업데이트</p>', unsafe_allow_html=True)
 
-st.title("🏫 플래닛학원 학생관리")
+st.markdown("#### 🏫 플래닛학원 족보ID관리")
 st.caption("맥가이 - 회원명단 엑셀파일 → 학생관리 최종파일")
 
 st.divider()

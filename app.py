@@ -17,7 +17,7 @@ from openpyxl.utils import get_column_letter
 MAX_GROUP_SIZE = 30
 
 ALL_COLUMNS = [
-    '학교', '학년', '이름', '학번', '선생님', '과목',
+    '학교', '학년', '이름', '학생번호', '선생님', '과목',
     '배포그룹', '그룹순번', '족보ID',
     '상태', '학생HP', '학부모HP', '메모'
 ]
@@ -44,7 +44,7 @@ def safe_str(value):
     return str(value).strip()
 
 def safe_student_id(value):
-    """학번 안전 변환 (5자리 유지)"""
+    """학생번호 안전 변환 (5자리 유지)"""
     if pd.isna(value):
         return ''
     if isinstance(value, float):
@@ -58,7 +58,7 @@ def clean_phone(value):
     return str(value).strip()
 
 def make_key(student_id, teacher, subject):
-    """강좌 키: 학번+선생님+과목"""
+    """강좌 키: 학생번호+선생님+과목"""
     return f"{safe_student_id(student_id)}_{safe_str(teacher)}_{safe_str(subject)}"
 
 def make_match_key(name, parent_phone):
@@ -144,7 +144,7 @@ def save_to_excel(df, color_info=None):
     
     col_to_idx = {col: idx + 1 for idx, col in enumerate(all_cols)}
     jokbo_col = col_to_idx.get('족보ID', None)
-    student_id_col = col_to_idx.get('학번', None)
+    student_id_col = col_to_idx.get('학생번호', None)
     
     # 데이터
     for row_idx, row_data in enumerate(df.values, 2):
@@ -155,7 +155,7 @@ def save_to_excel(df, color_info=None):
             cell.border = THIN_BORDER
             cell.alignment = Alignment(horizontal='center')
         
-        # 학번 5자리 텍스트
+        # 학생번호 5자리 텍스트
         if student_id_col:
             cell = ws.cell(row=row_idx, column=student_id_col)
             cell.number_format = '@'
@@ -187,7 +187,7 @@ def save_to_excel(df, color_info=None):
     
     # 컬럼 너비
     col_widths = {
-        '학교': 10, '학년': 6, '이름': 12, '학번': 8, '선생님': 8, '과목': 12,
+        '학교': 10, '학년': 6, '이름': 12, '학생번호': 8, '선생님': 8, '과목': 12,
         '배포그룹': 10, '그룹순번': 10, '족보ID': 12,
         '상태': 10, '학생HP': 16, '학부모HP': 16, '메모': 15
     }
@@ -247,7 +247,7 @@ def process_update(df_macguy, df_master=None):
                     '학교': school,
                     '학년': grade,
                     '이름': name,
-                    '학번': student_id,
+                    '학생번호': student_id,
                     '선생님': teacher,
                     '과목': subject,
                     '배포그룹': '',
@@ -265,7 +265,7 @@ def process_update(df_macguy, df_master=None):
                 '학교': school,
                 '학년': grade,
                 '이름': name,
-                '학번': student_id,
+                '학생번호': student_id,
                 '선생님': '',
                 '과목': '',
                 '배포그룹': '',
@@ -457,8 +457,11 @@ st.set_page_config(
     layout="centered"
 )
 
+# 업데이트 시점 표시
+st.markdown('<p style="color: #666; font-size: 12px; text-align: right; margin-bottom: 0;">v1.1 | 2026-04-03 업데이트</p>', unsafe_allow_html=True)
+
 st.title("🏫 플래닛학원 학생관리")
-st.caption("맥가이 회원명단 → 학생관리 최종파일")
+st.caption("맥가이 - 회원명단 엑셀파일 → 학생관리 최종파일")
 
 st.divider()
 
@@ -466,7 +469,7 @@ st.divider()
 col1, col2 = st.columns(2)
 
 with col1:
-    st.subheader("📁 맥가이 회원명단")
+    st.subheader("📁 맥가이 - 회원명단 엑셀파일")
     uploaded_macguy = st.file_uploader(
         "회원명단 파일 업로드",
         type=['xls', 'xlsx'],
@@ -475,7 +478,7 @@ with col1:
     )
 
 with col2:
-    st.subheader("📁 기존 학생관리 파일")
+    st.subheader("📁 기존 학생관리 엑셀파일")
     uploaded_master = st.file_uploader(
         "기존 최종파일 업로드 (선택)",
         type=['xlsx'],
@@ -488,7 +491,7 @@ st.divider()
 # 실행 버튼
 if st.button("🚀 업데이트 실행", type="primary", use_container_width=True):
     if not uploaded_macguy:
-        st.error("❌ 맥가이 회원명단 파일을 업로드해주세요.")
+        st.error("❌ 맥가이 - 회원명단 엑셀파일을 업로드해주세요.")
     else:
         with st.spinner("처리 중..."):
             try:
@@ -546,7 +549,7 @@ with st.expander("📖 사용 안내"):
     st.markdown("""
     ### 사용 방법
     1. **맥가이에서 회원명단** 다운로드
-    2. **기존 학생관리 파일** 업로드 (족보ID, 배포그룹 보존용)
+    2. **기존 학생관리 엑셀파일** 업로드 (족보ID, 배포그룹 보존용)
     3. **업데이트 실행** 버튼 클릭
     4. **결과 다운로드**
     

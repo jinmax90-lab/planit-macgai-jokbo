@@ -317,11 +317,11 @@ def process_update(df_macguy, df_master=None):
             if course_key in master_data:
                 old_data = master_data[course_key]
                 if old_data['족보ID']:
-                    df_new.at[idx, '족보ID'] = old_data['족보ID']
+                    df_new.at[idx, '족보ID'] = str(old_data['족보ID'])
                 if old_data['배포그룹'] not in ['', None] and pd.notna(old_data['배포그룹']):
-                    df_new.at[idx, '배포그룹'] = old_data['배포그룹']
+                    df_new.at[idx, '배포그룹'] = str(int(float(old_data['배포그룹'])))
                 if old_data['메모']:
-                    df_new.at[idx, '메모'] = old_data['메모']
+                    df_new.at[idx, '메모'] = str(old_data['메모'])
                 restored_count += 1
             else:
                 # 기존에 없던 신규 강좌
@@ -370,7 +370,7 @@ def process_update(df_macguy, df_master=None):
         group_key = f"{teacher}_{subject}"
         for group_num in range(1, 100):
             if group_counts[group_key][group_num] < MAX_GROUP_SIZE:
-                df_new.at[idx, '배포그룹'] = group_num
+                df_new.at[idx, '배포그룹'] = str(group_num)
                 group_counts[group_key][group_num] += 1
                 assigned_count += 1
                 break
@@ -391,7 +391,7 @@ def process_update(df_macguy, df_master=None):
         for (teacher, subject, group), grp in grouped:
             sorted_grp = grp.sort_values('이름')
             for order, (grp_idx, _) in enumerate(sorted_grp.iterrows(), 1):
-                df_new.at[grp_idx, '그룹순번'] = order
+                df_new.at[grp_idx, '그룹순번'] = str(order)
     
     # 5. 정렬
     df_new = df_new.sort_values(['이름', '선생님', '과목']).reset_index(drop=True)

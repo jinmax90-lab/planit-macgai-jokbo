@@ -21,12 +21,15 @@ KST = timezone(timedelta(hours=9))
 # GitHub CSV 업로드 함수
 # ============================================================
 def upload_csv_to_github(df):
-    """DataFrame을 CSV로 변환해서 GitHub에 업로드"""
+    """DataFrame을 CSV로 변환해서 GitHub에 업로드. 타임스탬프 반환"""
     try:
         token = st.secrets["GITHUB_TOKEN"]
         repo = st.secrets["GITHUB_REPO"]
     except:
-        return False, "GitHub 설정이 없습니다. Secrets를 확인하세요."
+        return False, "GitHub 설정이 없습니다. Secrets를 확인하세요.", None
+    
+    # 업로드 타임스탬프 생성
+    upload_timestamp = datetime.now(KST).strftime('%Y%m%d%H%M%S')
     
     # CSV로 변환 (학생 조회에 필요한 컬럼만)
     cols_for_search = ['이름', '학교', '학년', '선생님', '과목', '배포그룹', '족보ID', '상태']
@@ -34,6 +37,9 @@ def upload_csv_to_github(df):
     
     # 수강중인 학생만
     df_search = df_search[df_search['상태'] == '수강중']
+    
+    # 타임스탬프 컬럼 추가
+    df_search['_update'] = upload_timestamp
     
     csv_content = df_search.to_csv(index=False, encoding='utf-8')
     csv_base64 = base64.b64encode(csv_content.encode('utf-8')).decode('utf-8')
@@ -62,9 +68,9 @@ def upload_csv_to_github(df):
     response = requests.put(api_url, headers=headers, json=data)
     
     if response.status_code in [200, 201]:
-        return True, "GitHub 업로드 성공!"
+        return True, "GitHub 업로드 성공!", upload_timestamp
     else:
-        return False, f"업로드 실패: {response.status_code} - {response.text}"
+        return False, f"업로드 실패: {response.status_code} - {response.text}", None
 
 def get_students_from_github():
     """GitHub에서 학생 CSV 가져오기"""
@@ -523,10 +529,10 @@ st.set_page_config(
 )
 
 # 버전 관리 (화면에 표시 안함)
-# v1.5
+# v1.6
 
 # 업데이트 시점 표시
-st.markdown('<p style="color: #666; font-size: 12px; text-align: right; margin-bottom: 0;">2026-04-04 00:40 업데이트</p>', unsafe_allow_html=True)
+st.markdown('<p style="color: #666; font-size: 12px; text-align: right; margin-bottom: 0;">2026-04-04 00:55 업데이트</p>', unsafe_allow_html=True)
 
 st.markdown("#### 🏫 플래닛학원 족보ID관리")
 st.caption("맥가이 - 회원명단 엑셀파일 → 학생관리 최종파일")
@@ -653,14 +659,14 @@ if uploaded_final:
             
             # 1단계: GitHub 업로드
             with st.spinner("GitHub에 업로드 중..."):
-                success, message = upload_csv_to_github(df_final)
+                success, message, upload_timestamp = upload_csv_to_github(df_final)
             
             if success:
                 st.success(f"✅ {message}")
                 student_count = len(df_final[df_final['상태'] == '수강중'])
                 st.info(f"📊 업로드된 학생 수: {student_count}명")
                 
-                # 2단계: 반영 확인 (자동)
+                # 2단계: 반영 확인 (타임스탬프로 정확히 확인)
                 status_box = st.empty()
                 progress_bar = st.progress(0)
                 
@@ -673,13 +679,12 @@ if uploaded_final:
                     
                     time.sleep(10)
                     
-                    # GitHub에서 최신 데이터 확인
+                    # GitHub에서 타임스탬프 확인
                     try:
                         response = requests.get(csv_url + '?t=' + str(time.time()))
                         if response.status_code == 200:
-                            # 학생 수 비교로 반영 확인
-                            lines = response.text.strip().split('\n')
-                            if len(lines) > 1 and len(lines) - 1 >= student_count * 0.9:
+                            # 타임스탬프가 있는지 확인
+                            if upload_timestamp in response.text:
                                 reflected = True
                                 break
                     except:

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>플래닛학원 배포조회</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container { max-width: 500px; margin: 0 auto; }
+    .header { text-align: center; color: white; margin-bottom: 25px; }
+    .header h1 { font-size: 24px; margin-bottom: 5px; }
+    .header p { font-size: 14px; opacity: 0.9; }
+    .search-box {
+      background: white;
+      border-radius: 15px;
+      padding: 20px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      margin-bottom: 20px;
+    }
+    .input-group { display: flex; gap: 10px; }
+    input[type="text"] {
+      flex: 1;
+      padding: 15px;
+      font-size: 18px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      outline: none;
+    }
+    input[type="text"]:focus { border-color: #667eea; }
+    button {
+      padding: 15px 25px;
+      font-size: 16px;
+      font-weight: bold;
+      color: white;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    button:active { transform: scale(0.98); }
+    .results { display: flex; flex-direction: column; gap: 15px; }
+    .card {
+      background: white;
+      border-radius: 15px;
+      padding: 20px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+      animation: slideUp 0.3s ease;
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid #eee;
+    }
+    .student-name { font-size: 20px; font-weight: bold; color: #333; }
+    .student-school { font-size: 14px; color: #888; }
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .info-item { background: #f8f9fa; padding: 12px; border-radius: 8px; }
+    .info-label { font-size: 12px; color: #888; margin-bottom: 4px; }
+    .info-value { font-size: 16px; font-weight: 600; color: #333; }
+    .group-highlight {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    .group-highlight .info-label { color: rgba(255,255,255,0.8); }
+    .group-highlight .info-value { color: white; font-size: 24px; }
+    .no-result { text-align: center; color: white; padding: 40px; font-size: 16px; }
+    .loading { text-align: center; color: white; padding: 40px; }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 4px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 15px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .update-info {
+      text-align: center;
+      color: rgba(255,255,255,0.7);
+      font-size: 11px;
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🌟 플래닛학원</h1>
+      <p>배포그룹 조회</p>
+    </div>
+    <div class="search-box">
+      <div class="input-group">
+        <input type="text" id="nameInput" placeholder="이름을 입력하세요" autocomplete="off">
+        <button onclick="search()">검색</button>
+      </div>
+    </div>
+    <div id="results" class="results"></div>
+    <div class="update-info" id="updateInfo"></div>
+  </div>
+
+  <script>
+    // GitHub CSV 파일 URL
+    const CSV_URL = 'https://raw.githubusercontent.com/jinmax90-lab/planit-macgai-jokbo/main/students.csv';
+    
+    let studentData = [];
+    
+    // 페이지 로드 시 CSV 데이터 미리 로드
+    async function loadData() {
+      try {
+        const response = await fetch(CSV_URL + '?t=' + Date.now()); // 캐시 방지
+        const text = await response.text();
+        studentData = parseCSV(text);
+        console.log('데이터 로드 완료:', studentData.length, '건');
+      } catch (error) {
+        console.error('데이터 로드 실패:', error);
+      }
+    }
+    
+    // CSV 파싱
+    function parseCSV(text) {
+      const lines = text.trim().split('\n');
+      if (lines.length < 2) return [];
+      
+      const headers = parseCSVLine(lines[0]);
+      const data = [];
+      
+      for (let i = 1; i < lines.length; i++) {
+        const values = parseCSVLine(lines[i]);
+        const row = {};
+        headers.forEach((header, index) => {
+          row[header] = values[index] || '';
+        });
+        data.push(row);
+      }
+      
+      return data;
+    }
+    
+    // CSV 라인 파싱 (쉼표, 따옴표 처리)
+    function parseCSVLine(line) {
+      const result = [];
+      let current = '';
+      let inQuotes = false;
+      
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        
+        if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          result.push(current.trim());
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+      result.push(current.trim());
+      
+      return result;
+    }
+    
+    // 검색
+    async function search() {
+      const name = document.getElementById('nameInput').value.trim();
+      const resultsDiv = document.getElementById('results');
+      
+      if (!name) {
+        resultsDiv.innerHTML = '<div class="no-result">이름을 입력해주세요</div>';
+        return;
+      }
+      
+      resultsDiv.innerHTML = '<div class="loading"><div class="spinner"></div>검색 중...</div>';
+      
+      // 데이터가 없으면 다시 로드
+      if (studentData.length === 0) {
+        await loadData();
+      }
+      
+      // 이름으로 필터링
+      const results = studentData.filter(row => 
+        row['이름'] && row['이름'].includes(name)
+      );
+      
+      if (results.length === 0) {
+        resultsDiv.innerHTML = '<div class="no-result">검색 결과가 없습니다</div>';
+        return;
+      }
+      
+      resultsDiv.innerHTML = results.map(s => `
+        <div class="card">
+          <div class="card-header">
+            <span class="student-name">${s['이름'] || ''}</span>
+            <span class="student-school">${s['학교'] || ''} ${s['학년'] || ''}</span>
+          </div>
+          <div class="info-grid">
+            <div class="info-item">
+              <div class="info-label">선생님</div>
+              <div class="info-value">${s['선생님'] || '-'}</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">과목</div>
+              <div class="info-value">${s['과목'] || '-'}</div>
+            </div>
+            <div class="info-item group-highlight">
+              <div class="info-label">배포그룹</div>
+              <div class="info-value">${s['배포그룹'] || '-'}</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">족보ID</div>
+              <div class="info-value">${s['족보ID'] || '-'}</div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    // 엔터키 이벤트
+    document.getElementById('nameInput').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') search();
+    });
+    
+    // 포커스
+    document.getElementById('nameInput').focus();
+    
+    // 데이터 미리 로드
+    loadData();
+  </script>
+</body>
+</html>

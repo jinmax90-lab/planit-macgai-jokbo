@@ -5,6 +5,8 @@ Streamlit 웹앱
 
 import streamlit as st
 import pandas as pd
+import requests
+import base64
 from io import BytesIO
 from datetime import datetime, timezone, timedelta
 from openpyxl import Workbook
@@ -13,6 +15,65 @@ from openpyxl.utils import get_column_letter
 
 # 한국 시간대 (UTC+9)
 KST = timezone(timedelta(hours=9))
+
+# ============================================================
+# GitHub CSV 업로드 함수
+# ============================================================
+def upload_csv_to_github(df):
+    """DataFrame을 CSV로 변환해서 GitHub에 업로드"""
+    try:
+        token = st.secrets["GITHUB_TOKEN"]
+        repo = st.secrets["GITHUB_REPO"]
+    except:
+        return False, "GitHub 설정이 없습니다. Secrets를 확인하세요."
+    
+    # CSV로 변환 (학생 조회에 필요한 컬럼만)
+    cols_for_search = ['이름', '학교', '학년', '선생님', '과목', '배포그룹', '족보ID', '상태']
+    df_search = df[[c for c in cols_for_search if c in df.columns]].copy()
+    
+    # 수강중인 학생만
+    df_search = df_search[df_search['상태'] == '수강중']
+    
+    csv_content = df_search.to_csv(index=False, encoding='utf-8')
+    csv_base64 = base64.b64encode(csv_content.encode('utf-8')).decode('utf-8')
+    
+    # GitHub API
+    api_url = f"https://api.github.com/repos/{repo}/contents/students.csv"
+    headers = {
+        "Authorization": f"token {token}",
+        "Accept": "application/vnd.github.v3+json"
+    }
+    
+    # 기존 파일 SHA 가져오기 (업데이트용)
+    sha = None
+    response = requests.get(api_url, headers=headers)
+    if response.status_code == 200:
+        sha = response.json().get('sha')
+    
+    # 업로드
+    data = {
+        "message": f"학생 데이터 업데이트 - {datetime.now(KST).strftime('%Y-%m-%d %H:%M')}",
+        "content": csv_base64,
+    }
+    if sha:
+        data["sha"] = sha
+    
+    response = requests.put(api_url, headers=headers, json=data)
+    
+    if response.status_code in [200, 201]:
+        return True, "GitHub 업로드 성공!"
+    else:
+        return False, f"업로드 실패: {response.status_code} - {response.text}"
+
+def get_students_from_github():
+    """GitHub에서 학생 CSV 가져오기"""
+    try:
+        repo = st.secrets["GITHUB_REPO"]
+        csv_url = f"https://raw.githubusercontent.com/{repo}/main/students.csv"
+        df = pd.read_csv(csv_url)
+        return df
+    except:
+        return None
 
 # ============================================================
 # 설정
@@ -461,10 +522,10 @@ st.set_page_config(
 )
 
 # 버전 관리 (화면에 표시 안함)
-# v1.2
+# v1.3
 
 # 업데이트 시점 표시
-st.markdown('<p style="color: #666; font-size: 12px; text-align: right; margin-bottom: 0;">2026-04-03 21:00 업데이트</p>', unsafe_allow_html=True)
+st.markdown('<p style="color: #666; font-size: 12px; text-align: right; margin-bottom: 0;">2026-04-04 00:10 업데이트</p>', unsafe_allow_html=True)
 
 st.markdown("#### 🏫 플래닛학원 족보ID관리")
 st.caption("맥가이 - 회원명단 엑셀파일 → 학생관리 최종파일")
@@ -569,3 +630,64 @@ with st.expander("📖 사용 안내"):
     - 기존 파일을 올리면 **족보ID, 배포그룹**이 자동으로 복원됩니다
     - 이름+학부모전화번호로 학생을 매칭합니다
     """)
+
+# ============================================================
+# 학생 조회용 업데이트 (조교샘용)
+# ============================================================
+st.divider()
+st.markdown("#### 📤 학생 조회용 업데이트")
+st.caption("최종 수정된 엑셀파일을 업로드하면 학생들이 조회할 수 있게 됩니다")
+
+uploaded_final = st.file_uploader(
+    "최종 엑셀파일 업로드",
+    type=['xlsx'],
+    key='final_upload',
+    help="족보ID가 모두 입력된 최종 파일"
+)
+
+if uploaded_final:
+    if st.button("🚀 학생 조회용 업데이트", type="primary"):
+        with st.spinner("GitHub에 업로드 중..."):
+            try:
+                df_final = pd.read_excel(uploaded_final)
+                success, message = upload_csv_to_github(df_final)
+                if success:
+                    st.success(f"✅ {message}")
+                    st.info(f"📊 업로드된 학생 수: {len(df_final[df_final['상태'] == '수강중'])}명")
+                else:
+                    st.error(f"❌ {message}")
+            except Exception as e:
+                st.error(f"❌ 오류: {str(e)}")
+
+# ============================================================
+# 학생 검색 (학생용)
+# ============================================================
+st.divider()
+st.markdown("#### 🔍 학생 검색")
+st.caption("이름을 입력하면 배포그룹과 족보ID를 확인할 수 있습니다")
+
+search_name = st.text_input("이름 입력", placeholder="예: 홍길동")
+
+if search_name:
+    df_students = get_students_from_github()
+    if df_students is not None:
+        # 이름으로 검색 (부분 일치)
+        results = df_students[df_students['이름'].str.contains(search_name, na=False)]
+        
+        if len(results) > 0:
+            st.success(f"🎉 {len(results)}건 검색됨")
+            
+            for idx, row in results.iterrows():
+                with st.container():
+                    st.markdown(f"""
+                    **{row['이름']}** ({row.get('학교', '')})
+                    - 선생님: {row.get('선생님', '')}
+                    - 과목: {row.get('과목', '')}
+                    - **배포그룹: {row.get('배포그룹', '')}**
+                    - **족보ID: {row.get('족보ID', '')}**
+                    """)
+                    st.divider()
+        else:
+            st.warning("검색 결과가 없습니다.")
+    else:
+        st.warning("학생 데이터가 아직 없습니다. 조교샘이 먼저 업데이트해주세요.")

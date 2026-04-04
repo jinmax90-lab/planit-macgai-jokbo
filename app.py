@@ -7,6 +7,7 @@ import streamlit as st
 import pandas as pd
 import requests
 import base64
+import time
 from io import BytesIO
 from datetime import datetime, timezone, timedelta
 from openpyxl import Workbook
@@ -522,10 +523,10 @@ st.set_page_config(
 )
 
 # 버전 관리 (화면에 표시 안함)
-# v1.3
+# v1.5
 
 # 업데이트 시점 표시
-st.markdown('<p style="color: #666; font-size: 12px; text-align: right; margin-bottom: 0;">2026-04-04 00:10 업데이트</p>', unsafe_allow_html=True)
+st.markdown('<p style="color: #666; font-size: 12px; text-align: right; margin-bottom: 0;">2026-04-04 00:40 업데이트</p>', unsafe_allow_html=True)
 
 st.markdown("#### 🏫 플래닛학원 족보ID관리")
 st.caption("맥가이 - 회원명단 엑셀파일 → 학생관리 최종파일")
@@ -647,17 +648,53 @@ uploaded_final = st.file_uploader(
 
 if uploaded_final:
     if st.button("🚀 학생 조회용 업데이트", type="primary"):
-        with st.spinner("GitHub에 업로드 중..."):
-            try:
-                df_final = pd.read_excel(uploaded_final)
+        try:
+            df_final = pd.read_excel(uploaded_final)
+            
+            # 1단계: GitHub 업로드
+            with st.spinner("GitHub에 업로드 중..."):
                 success, message = upload_csv_to_github(df_final)
-                if success:
-                    st.success(f"✅ {message}")
-                    st.info(f"📊 업로드된 학생 수: {len(df_final[df_final['상태'] == '수강중'])}명")
+            
+            if success:
+                st.success(f"✅ {message}")
+                student_count = len(df_final[df_final['상태'] == '수강중'])
+                st.info(f"📊 업로드된 학생 수: {student_count}명")
+                
+                # 2단계: 반영 확인 (자동)
+                status_box = st.empty()
+                progress_bar = st.progress(0)
+                
+                csv_url = f"https://raw.githubusercontent.com/{st.secrets['GITHUB_REPO']}/main/students.csv"
+                
+                reflected = False
+                for i in range(18):  # 최대 3분 (18 * 10초)
+                    progress_bar.progress((i + 1) / 18)
+                    status_box.warning(f"⏳ 학생 검색 반영 확인 중... ({(i+1)*10}초)")
+                    
+                    time.sleep(10)
+                    
+                    # GitHub에서 최신 데이터 확인
+                    try:
+                        response = requests.get(csv_url + '?t=' + str(time.time()))
+                        if response.status_code == 200:
+                            # 학생 수 비교로 반영 확인
+                            lines = response.text.strip().split('\n')
+                            if len(lines) > 1 and len(lines) - 1 >= student_count * 0.9:
+                                reflected = True
+                                break
+                    except:
+                        pass
+                
+                progress_bar.empty()
+                
+                if reflected:
+                    status_box.success("✅ 학생 검색에 반영 완료!")
                 else:
-                    st.error(f"❌ {message}")
-            except Exception as e:
-                st.error(f"❌ 오류: {str(e)}")
+                    status_box.warning("⏱️ 아직 반영 중... 1~2분 후 검색해보세요")
+            else:
+                st.error(f"❌ {message}")
+        except Exception as e:
+            st.error(f"❌ 오류: {str(e)}")
 
 # ============================================================
 # 학생 검색 (학생용)

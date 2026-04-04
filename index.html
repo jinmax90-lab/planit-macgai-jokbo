@@ -15,7 +15,7 @@
     .container {
       max-width: 500px;
       margin: 0 auto;
-      background: white;
+      background: #f0f0f0;
       border-radius: 15px;
       padding: 25px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.1);
@@ -78,7 +78,7 @@
       gap: 15px;
     }
     .card {
-      background: #f9f9f9;
+      background: white;
       border-radius: 12px;
       padding: 15px;
     }
@@ -93,8 +93,9 @@
       color: #333;
     }
     .student-school {
-      font-size: 14px;
-      color: #888;
+      font-size: 16px;
+      color: #333;
+      font-weight: 500;
       margin-left: 10px;
     }
     .info-grid {
@@ -103,10 +104,14 @@
       gap: 10px;
     }
     .info-item {
-      background: white;
-      padding: 12px;
+      background: #f5f5f5;
+      padding: 15px 12px;
       border-radius: 8px;
       text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
     }
     .info-value {
       font-size: 15px;
@@ -114,27 +119,24 @@
       color: #333;
     }
     .group-highlight {
-      background: #5bc0de;
-      color: white;
-    }
-    .group-highlight .info-label {
-      color: rgba(255,255,255,0.8);
-      font-size: 11px;
+      background: #d4e9f7;
     }
     .group-highlight .info-value {
-      color: white;
+      color: #1a5a8a;
       font-size: 18px;
+      font-weight: bold;
     }
     .jokbo-item {
-      background: #f0f0f0;
+      background: #d4f0d4;
     }
     .jokbo-item .info-label {
       font-size: 11px;
-      color: #888;
+      color: #2d6a2d;
     }
     .jokbo-item .info-value {
       font-size: 16px;
-      color: #333;
+      color: #1a5a1a;
+      font-weight: bold;
     }
     .no-result {
       text-align: center;
@@ -254,10 +256,8 @@
       resultsDiv.innerHTML = '<div class="loading">검색 중...</div>';
       countDiv.textContent = '';
       
-      // 데이터가 없으면 다시 로드
-      if (studentData.length === 0) {
-        await loadData();
-      }
+      // 항상 최신 데이터 로드
+      await loadData();
       
       // 이름으로 필터링
       const results = studentData.filter(row => 

@@ -535,10 +535,10 @@ st.set_page_config(
 )
 
 # 버전 관리 (화면에 표시 안함)
-# v1.7
+# v1.8
 
 # 업데이트 시점 표시
-st.markdown('<p style="color: #666; font-size: 12px; text-align: right; margin-bottom: 0;">2026-04-04 01:05 업데이트</p>', unsafe_allow_html=True)
+st.markdown('<p style="color: #666; font-size: 12px; text-align: right; margin-bottom: 0;">2026-04-04 12:30 업데이트</p>', unsafe_allow_html=True)
 
 st.markdown("#### 🏫 플래닛학원 족보ID관리")
 st.caption("맥가이 - 회원명단 엑셀파일 → 학생관리 최종파일")
@@ -714,9 +714,13 @@ st.divider()
 st.markdown("#### 🔍 학생 검색")
 st.caption("이름을 입력하면 배포그룹과 족보ID를 확인할 수 있습니다")
 
-search_name = st.text_input("이름 입력", placeholder="예: 홍길동")
+col_search1, col_search2 = st.columns([4, 1])
+with col_search1:
+    search_name = st.text_input("이름 입력", placeholder="예) 홍길동", label_visibility="collapsed")
+with col_search2:
+    search_button = st.button("🔍 검색", use_container_width=True)
 
-if search_name:
+if search_name and (search_button or search_name):
     df_students = get_students_from_github()
     if df_students is not None:
         # 이름으로 검색 (부분 일치)

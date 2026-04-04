@@ -45,6 +45,7 @@
     }
     input[type="text"] {
       flex: 1;
+      min-width: 0;
       padding: 12px 15px;
       font-size: 16px;
       border: 1px solid #ddd;
@@ -55,7 +56,8 @@
       border-color: #5bc0de;
     }
     button {
-      padding: 12px 25px;
+      flex-shrink: 0;
+      padding: 12px 20px;
       font-size: 16px;
       font-weight: bold;
       color: white;
@@ -159,7 +161,7 @@
     </div>
     <div class="update-info" id="updateInfo">updated: 로딩중...</div>
     <div class="search-box">
-      <input type="text" id="nameInput" placeholder="홍길동" autocomplete="off">
+      <input type="text" id="nameInput" placeholder="예) 홍길동" autocomplete="off">
       <button onclick="search()">검색</button>
     </div>
     <div id="resultCount" class="result-count"></div>

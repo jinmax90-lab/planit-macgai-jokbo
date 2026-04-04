@@ -167,29 +167,35 @@
   </div>
 
   <script>
-    // GitHub CSV 파일 URL
-    const CSV_URL = 'https://raw.githubusercontent.com/jinmax90-lab/planit-macgai-jokbo/main/students.csv';
+    // jsDelivr CDN 사용 (캐시 빠름)
+    const CSV_URL = 'https://cdn.jsdelivr.net/gh/jinmax90-lab/planit-macgai-jokbo@main/students.csv';
     
     let studentData = [];
-    let lastUpdated = '';
     
     // 페이지 로드 시 CSV 데이터 미리 로드
     async function loadData() {
       try {
-        const response = await fetch(CSV_URL + '?t=' + Date.now());
+        // 캐시 무시
+        const response = await fetch(CSV_URL + '?t=' + Date.now(), {
+          cache: 'no-store'
+        });
         const text = await response.text();
         studentData = parseCSV(text);
         
-        // 업데이트 시간 (현재 시간으로 표시)
-        const now = new Date();
-        const dateStr = now.toLocaleDateString('ko-KR', {
-          year: '2-digit',
-          month: '2-digit', 
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit'
-        }).replace(/\. /g, '. ');
-        document.getElementById('updateInfo').textContent = 'updated: ' + dateStr;
+        // CSV의 _update 컬럼에서 실제 업데이트 시간 가져오기
+        if (studentData.length > 0 && studentData[0]['_update']) {
+          const ts = studentData[0]['_update'];
+          // 20260404105512 형식을 날짜로 변환
+          const year = ts.substring(0, 4);
+          const month = ts.substring(4, 6);
+          const day = ts.substring(6, 8);
+          const hour = ts.substring(8, 10);
+          const min = ts.substring(10, 12);
+          document.getElementById('updateInfo').textContent = 
+            `updated: ${year.substring(2)}. ${month}. ${day}. ${hour}:${min}`;
+        } else {
+          document.getElementById('updateInfo').textContent = 'updated: -';
+        }
         
         console.log('데이터 로드 완료:', studentData.length, '건');
       } catch (error) {

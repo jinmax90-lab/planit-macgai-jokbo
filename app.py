@@ -68,6 +68,12 @@ def upload_csv_to_github(df):
     response = requests.put(api_url, headers=headers, json=data)
     
     if response.status_code in [200, 201]:
+        # jsDelivr 캐시 purge (즉시 반영)
+        try:
+            purge_url = f"https://purge.jsdelivr.net/gh/{repo}@main/students.csv"
+            requests.get(purge_url)
+        except:
+            pass
         return True, "GitHub 업로드 성공!", upload_timestamp
     else:
         return False, f"업로드 실패: {response.status_code} - {response.text}", None
@@ -76,7 +82,7 @@ def get_students_from_github():
     """GitHub에서 학생 CSV 가져오기"""
     try:
         repo = st.secrets["GITHUB_REPO"]
-        csv_url = f"https://raw.githubusercontent.com/{repo}/main/students.csv"
+        csv_url = f"https://cdn.jsdelivr.net/gh/{repo}@main/students.csv"
         df = pd.read_csv(csv_url)
         return df
     except:
@@ -529,10 +535,10 @@ st.set_page_config(
 )
 
 # 버전 관리 (화면에 표시 안함)
-# v1.6
+# v1.7
 
 # 업데이트 시점 표시
-st.markdown('<p style="color: #666; font-size: 12px; text-align: right; margin-bottom: 0;">2026-04-04 00:55 업데이트</p>', unsafe_allow_html=True)
+st.markdown('<p style="color: #666; font-size: 12px; text-align: right; margin-bottom: 0;">2026-04-04 01:05 업데이트</p>', unsafe_allow_html=True)
 
 st.markdown("#### 🏫 플래닛학원 족보ID관리")
 st.caption("맥가이 - 회원명단 엑셀파일 → 학생관리 최종파일")
@@ -670,7 +676,7 @@ if uploaded_final:
                 status_box = st.empty()
                 progress_bar = st.progress(0)
                 
-                csv_url = f"https://raw.githubusercontent.com/{st.secrets['GITHUB_REPO']}/main/students.csv"
+                csv_url = f"https://cdn.jsdelivr.net/gh/{st.secrets['GITHUB_REPO']}@main/students.csv"
                 
                 reflected = False
                 for i in range(18):  # 최대 3분 (18 * 10초)

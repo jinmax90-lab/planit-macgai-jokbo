@@ -410,6 +410,67 @@ def process_update(df_macguy, df_master=None):
         
         logs.append(f"  → 기존 데이터 복원: {restored_count}건")
         logs.append(f"  → 신규 강좌: {len(new_course_keys)}건")
+        
+        # 2-1. 퇴원 학생 감지 (기존에 있는데 새 맥가이에 없는 학생)
+        logs.append("🔍 퇴원 학생 확인 중...")
+        
+        # 새 맥가이의 course_key 세트
+        new_course_keys_set = set()
+        for idx, row in df_new.iterrows():
+            match_key = row['_match_key']
+            teacher = safe_str(row.get('선생님', ''))
+            subject = safe_str(row.get('과목', ''))
+            if teacher and subject:
+                course_key = f"{match_key}_{teacher}_{subject}"
+                new_course_keys_set.add(course_key)
+        
+        # 기존 마스터에서 퇴원 학생 찾기
+        retired_records = []
+        for _, row in df_master.iterrows():
+            name = safe_str(row.get('이름', ''))
+            parent_hp = clean_phone(row.get('학부모HP', ''))
+            teacher = safe_str(row.get('선생님', ''))
+            subject = safe_str(row.get('과목', ''))
+            old_status = safe_str(row.get('상태', ''))
+            
+            # 이미 퇴원/휴원이었던 학생은 스킵
+            if old_status in ['퇴원', '휴원']:
+                continue
+            
+            # 과목미정도 스킵
+            if not teacher or not subject:
+                continue
+            
+            match_key = make_match_key(name, parent_hp)
+            course_key = f"{match_key}_{teacher}_{subject}"
+            
+            # 기존에 있는데 새 맥가이에 없으면 = 퇴원
+            if course_key not in new_course_keys_set:
+                retired_records.append({
+                    '학교': safe_str(row.get('학교', '')),
+                    '학년': safe_str(row.get('학년', '')),
+                    '이름': name,
+                    '학생번호': safe_student_id(row.get('학생번호', '')),
+                    '선생님': teacher,
+                    '과목': subject,
+                    '배포그룹': str(int(float(row.get('배포그룹', 0)))) if pd.notna(row.get('배포그룹', '')) and row.get('배포그룹', '') != '' else '',
+                    '그룹순번': '',
+                    '족보ID': safe_str(row.get('족보ID', '')),
+                    '상태': '퇴원',
+                    '학생HP': clean_phone(row.get('학생HP', '')),
+                    '학부모HP': parent_hp,
+                    '메모': safe_str(row.get('메모', '')),
+                    '_match_key': match_key
+                })
+        
+        if retired_records:
+            df_retired = pd.DataFrame(retired_records)
+            for col in df_retired.columns:
+                df_retired[col] = df_retired[col].astype(object)
+            df_new = pd.concat([df_new, df_retired], ignore_index=True)
+            logs.append(f"  → 퇴원 감지: {len(retired_records)}건")
+        else:
+            logs.append(f"  → 퇴원 감지: 0건")
     else:
         logs.append("📂 기존 마스터 없음 - 초기 생성 모드")
         for idx, row in df_new.iterrows():
@@ -535,10 +596,10 @@ st.set_page_config(
 )
 
 # 버전 관리 (화면에 표시 안함)
-# v1.8
+# v1.9
 
 # 업데이트 시점 표시
-st.markdown('<p style="color: #666; font-size: 12px; text-align: right; margin-bottom: 0;">2026-04-04 12:30 업데이트</p>', unsafe_allow_html=True)
+st.markdown('<p style="color: #666; font-size: 12px; text-align: right; margin-bottom: 0;">2026-04-10 20:00 업데이트</p>', unsafe_allow_html=True)
 
 st.markdown("#### 🏫 플래닛학원 족보ID관리")
 st.caption("맥가이 - 회원명단 엑셀파일 → 학생관리 최종파일")
